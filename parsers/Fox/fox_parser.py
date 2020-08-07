@@ -40,6 +40,7 @@ class FoxParser(Parser):
 		    GROUPS.DEM : 'Dem'
 		}
 		self.question_break = "\n \n                                                                                      Non"
+		self.question_break_2 = "\n \n                                                                                       Non"
 
 	def get_numbers(self, split_section):
 	    nums = [i.strip() for i in split_section.split(" ")]
@@ -78,6 +79,8 @@ class FoxParser(Parser):
 			question_to_look_for = questions[1].value
 			first_index = decoded_text.find(str(question_to_look_for))
 			second_index = decoded_text[first_index+200:].find(self.question_break)
+			if second_index == -1:
+				second_index = decoded_text[first_index+200:].find(self.question_break_2)
 			passage = decoded_text[first_index:first_index+second_index]
 			print ("PASSAGE: " + passage)
 			split = passage.split("\n")
