@@ -26,7 +26,7 @@ class QuinnParser(Parser):
 		self.PUNCHES_TO_QUESTION_MAPPING = [( ['Trump_StrApp', "Trump_App", "Trump_Disapproval", "Trump_StrDisapp", 'DK-NO_RECORD'], Question.TRUMPJOB ),
 		                              ( ['BIDEN_THERM_Warm', "BIDEN_THERM_Cool", "BIDEN_THERM_Neut", 'DK-NO_RECORD'], Question.BIDEN_FAV ),
 		                              ( ['TRUMP_THERM_Warm', "TRUMP_THERM_Cool", "TRUMP_THERM_Neut", 'DK-NO_RECORD'], Question.TRUMP_FAV ),
-		                              ( ['Pres20BT_Biden', "Pres20BT_Trump", "DKNA_Pres20BT", 'DK-NO_RECORD', 'DK-NO_RECORD'], Question.VOTE_2020 )] 
+		                              ( ['Pres20BT_Biden', "Pres20BT_Trump", "DK-NO_RECORD", 'DK-NO_RECORD'], Question.VOTE_2020 )] 
 
 		self.GROUP_TO_SPLIT_DICT = {
 		    GROUPS.ALL : 'Tot',
@@ -49,6 +49,13 @@ class QuinnParser(Parser):
 	        if ((min_list.isdigit()) or (min_list == '-')):
 	            good.append(min_list)
 	    return good
+
+	def find_next_section(self, text, seperator, n):
+		start = text.find(seperator)
+		while start >= 0 and n > 1:
+			start = text.find(seperator, start+len(seperator))
+			n -= 1
+		return start
 
 	def run(self, number_of_pages_to_skip):
 		# get PDF text
@@ -75,7 +82,7 @@ class QuinnParser(Parser):
 		for questions in self.PUNCHES_TO_QUESTION_MAPPING:
 		    question_to_look_for = questions[1].value
 		    first_index = decoded_text.find(str(question_to_look_for))
-		    second_index = decoded_text[first_index:].find("TREND")
+		    second_index = self.find_next_section(decoded_text[first_index:], "LIKELY VOTERS.....", 2)
 		    passage = decoded_text[first_index:first_index+second_index]
 		    split = passage.split("\n")
 		    percentages = []
