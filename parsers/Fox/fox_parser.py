@@ -20,8 +20,8 @@ class FoxParser(Parser):
 		self.total_n = total_n
 		class Question(Enum):
 			TRUMPJOB = "Do you approve or disapprove of the job Donald Trump is doing as president? [IF APPROVE"
-			BIDEN_FAV = "Joe Biden - Please tell"
-			TRUMP_FAV = "Donald Trump - Please tell"
+			BIDEN_FAV = "Joe Biden: Please tell"
+			TRUMP_FAV = "Donald Trump: Please tell"
 			VOTE_2020 = "how would you vote if the candidates were: "
 		self.PUNCHES_TO_QUESTION_MAPPING = [( ['Trump_StrApp', "Trump_App", "Trump_Disapproval", "Trump_StrDisapp", 'DK-NO_RECORD'], Question.TRUMPJOB ),
                                ( ['DK-NO_RECORD', 'DK-NO_RECORD', 'DK-NO_RECORD', 'DK-NO_RECORD', "BIDEN_THERM_Neut", 'DK-NO_RECORD', 'BIDEN_THERM_Warm', "BIDEN_THERM_Cool"], Question.BIDEN_FAV ),
@@ -39,8 +39,7 @@ class FoxParser(Parser):
 		    GROUPS.REP : 'GOP',
 		    GROUPS.DEM : 'Dem'
 		}
-		self.question_break = "\n \n                                                                                      Non"
-		self.question_break_2 = "\n \n                                                                                       Non"
+		self.question_break = "Non"
 
 	def get_numbers(self, split_section):
 	    nums = [i.strip() for i in split_section.split(" ")]
@@ -52,6 +51,13 @@ class FoxParser(Parser):
 	            if ((min_list[-1] == "%") or (min_list == '-')):
 	                good.append(min_list.replace("%", ""))
 	    return good
+
+	def find_next_section(self, text, seperator, n):
+		start = text.find(seperator)
+		while start >= 0 and n > 1:
+			start = text.find(seperator, start+len(seperator))
+			n -= 1
+		return start
 
 	def run(self, number_of_pages_to_skip):
 		# get PDF text
@@ -78,11 +84,16 @@ class FoxParser(Parser):
 		for questions in self.PUNCHES_TO_QUESTION_MAPPING:
 			question_to_look_for = questions[1].value
 			first_index = decoded_text.find(str(question_to_look_for))
-			second_index = decoded_text[first_index+200:].find(self.question_break)
-			if second_index == -1:
-				second_index = decoded_text[first_index+200:].find(self.question_break_2)
+			second_index = self.find_next_section(decoded_text[first_index:], self.question_break, 4)
 			passage = decoded_text[first_index:first_index+second_index]
-			print ("PASSAGE: " + passage)
+			if not passage:
+				if question_to_look_for == "Joe Biden: Please tell":
+					question_to_look_for == "Joe Biden - Please tell me"
+				if question_to_look_for == "Donald Trump: Please tell":
+					question_to_look_for == "Donald Trump - Please tell me"
+				first_index = decoded_text.find(str(question_to_look_for))
+				second_index = self.find_next_section(decoded_text[first_index:], self.question_break, 4)
+				passage = decoded_text[first_index:first_index+second_index]
 			split = passage.split("\n")
 			percentages = []
 			for s in split:
@@ -104,7 +115,7 @@ class FoxParser(Parser):
 				columns.append(col)
 
 			dems = " ".join([i.strip() for i in passage.split("\n") if (i.strip().startswith("Total"))]).split(" ")
-			dems = [j for j in dems if len(j) > 0]
+			dems = [j for j in dems if len(j) > 0 and j != "Age"]
 
 			# loop through columns aka RightTrack
 			for i in range(len(questions[0])):
